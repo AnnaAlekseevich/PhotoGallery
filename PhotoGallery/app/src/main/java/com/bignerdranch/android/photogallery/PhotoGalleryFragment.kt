@@ -1,11 +1,18 @@
 package com.bignerdranch.android.photogallery
 
+import android.content.Context
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.view.ViewTreeObserver
+import android.widget.ImageView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.paging.PagedList
@@ -13,24 +20,39 @@ import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bignerdranch.android.photogallery.PhotoGalleryFragment.PhotoAdapter.Companion.DIFF_CALLBACK
 import java.util.concurrent.Executors
+import kotlin.properties.Delegates
 
 private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
+private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoGalleryFragment.PhotoHolder>
 class PhotoGalleryFragment : Fragment() {
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView: RecyclerView
+    var spanCount: Int? = null
+    val cellWidth: Int? = null
 
 
-private val adapter =  PhotoAdapter()
+
+    private var adapter: PhotoAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        retainInstance = true
 
         photoGalleryViewModel =
             ViewModelProviders.of(this).get(PhotoGalleryViewModel::class.java)
         Log.d(TAG_T, "onCreate + thread= ${Thread.currentThread()}")
+        adapter = PhotoAdapter(requireContext())
 
+        val responseHandler = Handler()
+        thumbnailDownloader =
+            ThumbnailDownloader(responseHandler){ photoHolder, bitmap ->
+                val drawable = BitmapDrawable(resources, bitmap)
+                photoHolder.bindDrawable(drawable)
+            }
+        lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
 
     }
 
@@ -52,7 +74,18 @@ private val adapter =  PhotoAdapter()
                 .setNotifyExecutor(MainThreadExecutor())
                 .build()
 
-        adapter.submitList(pagedList)
+        adapter?.submitList(pagedList)
+    }
+
+    fun View.afterMeasured( f: View.() -> Unit) {
+        viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                if (measuredHeight > 0 && measuredWidth > 0) {
+                    viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    f()
+                }
+            }
+        })
     }
 
 
@@ -60,13 +93,24 @@ private val adapter =  PhotoAdapter()
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
+        viewLifecycleOwner.lifecycle.addObserver(
+            thumbnailDownloader.viewLifecycleObserver
+        )
         val view = inflater.inflate(R.layout.fragment_photo_gallery, container, false)
         Log.d(TAG, "onCreateView")
         photoRecyclerView = view.findViewById(R.id.photo_recycler_view)
-        photoRecyclerView.layoutManager = GridLayoutManager(context, 1)
 
+        photoRecyclerView.afterMeasured {
+            val weightColum: Int = activity?.resources?.getDimension(R.dimen.column_average_width)!!
+                .toInt()
 
+                    spanCount = photoRecyclerView.width/weightColum
+                    Log.d(TAG, "onCreateView - spanCount = " + spanCount)
+                    Log.d(TAG, "onCreateView - weightColum = " + weightColum)
+                    Log.d(TAG, "onCreateView - photoRecyclerView.width = " + photoRecyclerView.width)
+            photoRecyclerView.layoutManager = GridLayoutManager(context, photoRecyclerView.width/weightColum)
+        }
         return view
     }
 
@@ -91,8 +135,7 @@ private val adapter =  PhotoAdapter()
     }
 
 
-
-    private class PhotoAdapter() :
+    private class PhotoAdapter(val context: Context) :
         PagedListAdapter<GalleryItem, PhotoHolder>(DIFF_CALLBACK) {
 
         override fun onBindViewHolder(holder: PhotoHolder, position: Int) {
@@ -102,7 +145,23 @@ private val adapter =  PhotoAdapter()
             // Note that "concert" is a placeholder if it's null.
             //holder.bindTo(itItem)
             Log.d(TAG, "PhotoAdapter" + itItem)
-            itItem?.let { holder.bindTitle(it.title) }
+            val placeholder: Drawable = ContextCompat.getDrawable(
+                context,
+                R.drawable.bill_up_close
+            ) ?: ColorDrawable()
+            holder.bindDrawable(placeholder)
+            if (itItem != null) {
+                thumbnailDownloader.queueThumbnail(holder, itItem.url)
+            }
+            holder.itemView.post(Runnable {
+                fun run()
+                {
+                    val cellWidth: Int = holder.itemView.getWidth();// this will give you cell width dynamically
+                    Log.d(TAG, "onBindViewHolder - cellWidth = " + cellWidth)
+                    val cellHeight: Int = holder.itemView.getHeight();// this will give you cell height dynamically
+                }
+            })
+
         }
 
         companion object {
@@ -120,15 +179,32 @@ private val adapter =  PhotoAdapter()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoHolder {
             Log.d(TAG, "onCreateViewHolder")
-            val textView = TextView(parent.context)
-            return PhotoHolder(textView)
+            val imageView = LayoutInflater.from(parent.context).inflate(
+                R.layout.list_item_gallery,
+                parent,
+                false
+            ) as ImageView
+            return PhotoHolder(imageView)
         }
     }
 
-        class PhotoHolder(itemTextView: TextView) : RecyclerView.ViewHolder(itemTextView){
-            val bindTitle: (CharSequence) -> Unit = itemTextView::setText
-        }
+    class PhotoHolder(itemImageView: ImageView) : RecyclerView.ViewHolder(itemImageView) {
+        val bindDrawable: (Drawable) -> Unit = itemImageView::setImageDrawable
+    }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        viewLifecycleOwner.lifecycle.removeObserver(
+            thumbnailDownloader.viewLifecycleObserver
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        lifecycle.removeObserver(
+            thumbnailDownloader.fragmentLifecycleObserver
+        )
+    }
 }
 
 
