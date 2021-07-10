@@ -14,15 +14,15 @@ import android.view.ViewTreeObserver
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProviders
 import androidx.paging.PagedList
 import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bignerdranch.android.photogallery.PhotoGalleryFragment.PhotoAdapter.Companion.DIFF_CALLBACK
 import java.util.concurrent.Executors
-import kotlin.properties.Delegates
 
 private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
@@ -94,9 +94,15 @@ class PhotoGalleryFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        viewLifecycleOwner.lifecycle.addObserver(
-            thumbnailDownloader.viewLifecycleObserver
-        )
+
+        activity?.let {
+            getViewLifecycleOwnerLiveData().observe(it) { viewLifecycleOwner ->
+                viewLifecycleOwner.lifecycle.addObserver(
+                    thumbnailDownloader.viewLifecycleObserver
+                )
+            }
+        }
+
         val view = inflater.inflate(R.layout.fragment_photo_gallery, container, false)
         Log.d(TAG, "onCreateView")
         photoRecyclerView = view.findViewById(R.id.photo_recycler_view)
@@ -111,7 +117,8 @@ class PhotoGalleryFragment : Fragment() {
                     Log.d(TAG, "onCreateView - photoRecyclerView.width = " + photoRecyclerView.width)
             photoRecyclerView.layoutManager = GridLayoutManager(context, photoRecyclerView.width/weightColum)
         }
-        return view
+            return view
+
     }
 
     companion object {
@@ -205,6 +212,7 @@ class PhotoGalleryFragment : Fragment() {
             thumbnailDownloader.fragmentLifecycleObserver
         )
     }
+
 }
 
 
