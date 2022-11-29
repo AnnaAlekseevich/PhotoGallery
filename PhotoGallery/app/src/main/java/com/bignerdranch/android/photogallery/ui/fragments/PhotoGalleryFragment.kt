@@ -1,4 +1,4 @@
-package com.bignerdranch.android.photogallery
+package com.bignerdranch.android.photogallery.ui.fragments
 
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
@@ -12,14 +12,17 @@ import android.widget.ImageView
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProviders
 import androidx.paging.PagedList
 import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bignerdranch.android.photogallery.MainThreadExecutor
+import com.bignerdranch.android.photogallery.MyPositionalDataSource
+import com.bignerdranch.android.photogallery.R
+import com.bignerdranch.android.photogallery.ThumbnailDownloader
+import com.bignerdranch.android.photogallery.domain.api.models.GalleryItem
 import java.util.concurrent.Executors
 
 private const val TAG = "PhotoGalleryFragment"
@@ -176,10 +179,12 @@ class PhotoGalleryFragment : Fragment() {
                 // Concert details may have changed if reloaded from the database,
                 // but ID is fixed.
                 override fun areItemsTheSame(oldItem: GalleryItem,
-                                             newItem: GalleryItem) = oldItem.id == newItem.id
+                                             newItem: GalleryItem
+                ) = oldItem.id == newItem.id
 
                 override fun areContentsTheSame(oldItem: GalleryItem,
-                                                newItem: GalleryItem) = oldItem == newItem
+                                                newItem: GalleryItem
+                ) = oldItem == newItem
             }
         }
 

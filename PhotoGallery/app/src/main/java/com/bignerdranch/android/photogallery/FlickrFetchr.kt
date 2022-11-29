@@ -6,11 +6,11 @@ import android.util.Log
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.paging.PagedList
-import com.bignerdranch.android.photogallery.api.FlickrApi
-import com.bignerdranch.android.photogallery.api.PhotoInterceptor
-import com.bignerdranch.android.photogallery.api.PhotoResponse
-import com.google.gson.GsonBuilder
+import com.bignerdranch.android.photogallery.domain.api.FlickrApi
+import com.bignerdranch.android.photogallery.domain.api.PhotoInterceptor
+import com.bignerdranch.android.photogallery.domain.models.PhotoResponse
+import com.bignerdranch.android.photogallery.domain.models.FlickrResponse
+import com.bignerdranch.android.photogallery.domain.models.GalleryItem
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Call

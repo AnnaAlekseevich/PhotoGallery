@@ -1,4 +1,4 @@
-package com.bignerdranch.android.photogallery.api
+package com.bignerdranch.android.photogallery.domain.models
 
 import okhttp3.HttpUrl
 import okhttp3.Interceptor

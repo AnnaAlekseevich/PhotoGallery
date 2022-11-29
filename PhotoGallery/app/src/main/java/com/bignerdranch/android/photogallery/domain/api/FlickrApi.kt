@@ -1,6 +1,6 @@
-package com.bignerdranch.android.photogallery.api
+package com.bignerdranch.android.photogallery.domain.api
 
-import com.bignerdranch.android.photogallery.FlickrResponse
+import com.bignerdranch.android.photogallery.domain.models.FlickrResponse
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.GET

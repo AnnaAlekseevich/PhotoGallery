@@ -3,6 +3,7 @@ package com.bignerdranch.android.photogallery
 
 import android.util.Log
 import androidx.paging.PositionalDataSource
+import com.bignerdranch.android.photogallery.domain.models.GalleryItem
 
 
 class MyPositionalDataSource(private val photos: List<GalleryItem>) :
