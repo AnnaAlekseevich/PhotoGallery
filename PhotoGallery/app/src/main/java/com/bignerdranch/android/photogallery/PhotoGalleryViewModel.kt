@@ -1,9 +1,8 @@
 package com.bignerdranch.android.photogallery
 
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.ViewModel
-import androidx.paging.PagedList
+import android.app.Application
+import androidx.lifecycle.*
 
 //class PhotoGalleryViewModel : ViewModel() {
 //    val galleryItemLiveData: LiveData<List<GalleryItem>>
@@ -17,11 +16,28 @@ import androidx.paging.PagedList
 //    val concertList: LiveData<PagedList<Concert>> =
 //        concertDao.concertsByDate().toLiveData(pageSize = 50)
 //}
-class PhotoGalleryViewModel : ViewModel() {
+class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app) {
     val galleryItemLiveData: LiveData<List<GalleryItem>>
+    private val flickrFetchr = FlickrFetchr()
+    private val mutableSearchTerm = MutableLiveData<String>()
+
+    val searchTerm: String
+        get() = mutableSearchTerm.value ?: ""
 
     init {
-        galleryItemLiveData = FlickrFetchr().fetchPhotos()
+        mutableSearchTerm.value = QueryPreferences.getStoredQuery(app)//"planets"
+        galleryItemLiveData = Transformations.switchMap(mutableSearchTerm) { searchTerm ->
+            if (searchTerm.isBlank()) {
+                flickrFetchr.fetchPhotos()
+            } else {
+                flickrFetchr.searchPhotos(searchTerm)
+            }
+        }
+    }
+
+    fun fetchPhotos(query: String = "") {
+        QueryPreferences.setStoredQuery(app, query)
+        mutableSearchTerm.value = query
     }
 
 }
