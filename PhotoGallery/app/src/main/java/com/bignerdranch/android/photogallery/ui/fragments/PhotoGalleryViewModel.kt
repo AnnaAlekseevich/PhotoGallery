@@ -5,7 +5,7 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.bignerdranch.android.photogallery.FlickrFetchr
 import com.bignerdranch.android.photogallery.QueryPreferences
-import com.bignerdranch.android.photogallery.domain.api.models.GalleryItem
+import com.bignerdranch.android.photogallery.domain.models.GalleryItem
 
 //class PhotoGalleryViewModel : ViewModel() {
 //    val galleryItemLiveData: LiveData<List<GalleryItem>>

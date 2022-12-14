@@ -7,13 +7,13 @@ import com.bignerdranch.android.photogallery.domain.models.GalleryItem
 
 
 class MyPositionalDataSource(private val photos: List<GalleryItem>) :
-    PositionalDataSource<GalleryItem?>() {
+    PositionalDataSource<GalleryItem>() {
 
     private val TAG = "MyPositionalDataSource"
 
     override fun loadInitial(
         params: LoadInitialParams,
-        callback: LoadInitialCallback<GalleryItem?>
+        callback: LoadInitialCallback<GalleryItem>
     ) {
         Log.d(
             TAG, "loadInitial, requestedStartPosition = " + params.requestedStartPosition +
@@ -24,12 +24,12 @@ class MyPositionalDataSource(private val photos: List<GalleryItem>) :
             resultInitial.add(photos[n])
         }
         Log.d(TAG, "resultInitial = " + resultInitial)
-        callback.onResult(resultInitial as List<GalleryItem?>, 0)
+        callback.onResult(resultInitial as List<GalleryItem>, 0)
     }
 
     override fun loadRange(
         params: LoadRangeParams,
-        callback: LoadRangeCallback<GalleryItem?>
+        callback: LoadRangeCallback<GalleryItem>
     ) {
         Log.d(
             TAG,
@@ -47,7 +47,7 @@ class MyPositionalDataSource(private val photos: List<GalleryItem>) :
         }
         //val result: List<GalleryItem?> = photos.getData(params.startPosition, params.loadSize)
         Log.d(TAG, "resultRange = " + resultRange)
-        callback.onResult(resultRange as List<GalleryItem?>)
+        callback.onResult(resultRange as List<GalleryItem>)
     }
 
 }

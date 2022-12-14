@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.*
 import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -18,15 +20,18 @@ import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.*
+import com.bignerdranch.android.photogallery.*
 import com.bignerdranch.android.photogallery.MainThreadExecutor
-import com.bignerdranch.android.photogallery.MyPositionalDataSource
 import com.bignerdranch.android.photogallery.R
-import com.bignerdranch.android.photogallery.ThumbnailDownloader
-import com.bignerdranch.android.photogallery.domain.api.models.GalleryItem
+import com.bignerdranch.android.photogallery.domain.managers.workmanager.PollWorker
+import com.bignerdranch.android.photogallery.domain.models.GalleryItem
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
+private const val POLL_WORK = "POLL_WORK"
 private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoGalleryFragment.PhotoHolder>
 class PhotoGalleryFragment : Fragment() {
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
@@ -56,6 +61,16 @@ class PhotoGalleryFragment : Fragment() {
             }
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
 
+//        val constraints = Constraints.Builder()
+//            .setRequiredNetworkType(NetworkType.UNMETERED)
+//            .build()
+//        val workRequest = OneTimeWorkRequest
+//            .Builder(PollWorker::class.java)
+//            .setConstraints(constraints)
+//            .build()
+//        WorkManager.getInstance()
+//            .enqueue(workRequest)
+
     }
 
     private fun onPhotosLoaded(items: List<GalleryItem>){
@@ -70,7 +85,7 @@ class PhotoGalleryFragment : Fragment() {
             .setPageSize(20)
             .build()
 
-            val pagedList: PagedList<GalleryItem?> =
+            val pagedList: PagedList<GalleryItem> =
             PagedList.Builder(dataSource, config)
                 .setFetchExecutor(Executors.newSingleThreadExecutor())
                 .setNotifyExecutor(MainThreadExecutor())
@@ -81,6 +96,7 @@ class PhotoGalleryFragment : Fragment() {
 
     private fun View.afterMeasured(f: View.() -> Unit) {
         viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
             override fun onGlobalLayout() {
                 if (measuredHeight > 0 && measuredWidth > 0) {
                     viewTreeObserver.removeOnGlobalLayoutListener(this)
@@ -132,15 +148,14 @@ class PhotoGalleryFragment : Fragment() {
 
         Log.d(TAG, "onViewCreated")
         photoGalleryViewModel.galleryItemLiveData.observe(
-            viewLifecycleOwner,
-            { galleryItems ->
-                Log.d(TAG, "onViewCreated - galleryItems" + galleryItems)
-                photoRecyclerView.adapter = adapter
-                onPhotosLoaded(galleryItems)
-                Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
+            viewLifecycleOwner
+        ) {
+            Log.d(TAG, "onViewCreated - galleryItems" + it)
+            photoRecyclerView.adapter = adapter
+            onPhotosLoaded(it)
+            Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
 
-            }
-        )
+        }
     }
 
 
@@ -239,6 +254,14 @@ class PhotoGalleryFragment : Fragment() {
                 searchView.setQuery(photoGalleryViewModel.searchTerm, false)
             }
         }
+        val toggleItem = menu.findItem(R.id.menu_item_toggle_polling)
+        val isPolling = QueryPreferences.isPolling(requireContext())
+        val toggleItemTitle = if (isPolling) {
+            R.string.stop_polling
+        } else {
+            R.string.start_polling
+        }
+        toggleItem.setTitle(toggleItemTitle)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -246,6 +269,27 @@ class PhotoGalleryFragment : Fragment() {
             R.id.menu_item_clear -> {
                 photoGalleryViewModel.fetchPhotos("")
                 true
+            }
+            R.id.menu_item_toggle_polling -> {
+                val isPolling = QueryPreferences.isPolling(requireContext())
+                if (isPolling) {
+                    WorkManager.getInstance().cancelUniqueWork(POLL_WORK)
+                    QueryPreferences.setPolling(requireContext(), false)
+                } else {
+                    val constraints = Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.UNMETERED)
+                        .build()
+                    val periodicRequest = PeriodicWorkRequest
+                        .Builder(PollWorker::class.java, 15, TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
+                    WorkManager.getInstance().enqueueUniquePeriodicWork(POLL_WORK,
+                        ExistingPeriodicWorkPolicy.KEEP,
+                        periodicRequest)
+                    QueryPreferences.setPolling(requireContext(), true)
+                }
+                activity?.invalidateOptionsMenu()
+                return true
             }
             else -> super.onOptionsItemSelected(item)
         }

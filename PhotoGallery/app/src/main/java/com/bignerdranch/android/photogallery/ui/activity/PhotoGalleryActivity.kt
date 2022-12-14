@@ -1,9 +1,11 @@
 package com.bignerdranch.android.photogallery.ui.activity
 
+import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.bignerdranch.android.photogallery.PhotoGalleryFragment
 import com.bignerdranch.android.photogallery.R
+import com.bignerdranch.android.photogallery.ui.fragments.PhotoGalleryFragment
 
 class PhotoGalleryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,4 +20,11 @@ class PhotoGalleryActivity : AppCompatActivity() {
                 .commit()
         }
     }
+
+    companion object {
+        fun newIntent(context: Context): Intent {
+            return Intent(context, PhotoGalleryActivity::class.java)
+        }
+    }
+
 }
