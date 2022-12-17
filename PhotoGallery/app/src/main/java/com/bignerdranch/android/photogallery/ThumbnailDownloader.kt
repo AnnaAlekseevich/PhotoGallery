@@ -48,7 +48,7 @@ class ThumbnailDownloader<in T>(
     private var hasQuit = false
     private lateinit var requestHandler: Handler
     private val requestMap = ConcurrentHashMap<T, String>()
-    private val flickrFetchr = FlickrFetchr()
+    private val flickrFetcher = FlickrFetcher()
 
     @Suppress("UNCHECKED_CAST")
     @SuppressLint("HandlerLeak")
@@ -80,7 +80,7 @@ class ThumbnailDownloader<in T>(
 
     fun handleRequest(target: T) {
         val url = requestMap[target] ?: return
-        val bitmap = flickrFetchr.fetchPhoto(url) ?: return
+        val bitmap = flickrFetcher.fetchPhoto(url) ?: return
         responseHandler.post(Runnable {
             if (requestMap[target] != url || hasQuit) {
                 return@Runnable

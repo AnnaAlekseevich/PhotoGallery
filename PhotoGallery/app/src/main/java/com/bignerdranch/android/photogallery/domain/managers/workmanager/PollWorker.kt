@@ -7,7 +7,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import com.bignerdranch.android.photogallery.FlickrFetchr
+import com.bignerdranch.android.photogallery.FlickrFetcher
 import com.bignerdranch.android.photogallery.NOTIFICATION_CHANNEL_ID
 import com.bignerdranch.android.photogallery.QueryPreferences
 import com.bignerdranch.android.photogallery.R
@@ -22,13 +22,13 @@ class PollWorker(val context: Context, workerParams: WorkerParameters)
         val query = QueryPreferences.getStoredQuery(context)
         val lastResultId = QueryPreferences.getLastResultId(context)
         val items: List<GalleryItem> = if (query.isEmpty()) {
-            FlickrFetchr().fetchPhotosRequest()
+            FlickrFetcher().fetchPhotosRequest()
                 .execute()
                 .body()
                 ?.photos
                 ?.galleryItems
         } else {
-            FlickrFetchr().searchPhotosRequest(query)
+            FlickrFetcher().searchPhotosRequest(query)
                 .execute()
                 .body()
                 ?.photos

@@ -21,7 +21,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 private const val TAG = "FlickrFetchr"
 
-class FlickrFetchr {
+class FlickrFetcher {
     private val flickrApi: FlickrApi
 
     init {
