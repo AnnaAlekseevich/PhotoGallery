@@ -1,9 +1,11 @@
 package com.bignerdranch.android.photogallery
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -12,25 +14,25 @@ import android.widget.ImageView
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProviders
 import androidx.paging.PagedList
 import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bignerdranch.android.photogallery.services.ForegroundService
+import com.bignerdranch.android.photogallery.services.SimpleService
 import java.util.concurrent.Executors
 
 private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
 private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoGalleryFragment.PhotoHolder>
+
 class PhotoGalleryFragment : Fragment() {
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView: RecyclerView
     var spanCount: Int? = null
     val cellWidth: Int? = null
-
 
 
     private var adapter: PhotoAdapter? = null
@@ -47,7 +49,7 @@ class PhotoGalleryFragment : Fragment() {
 
         val responseHandler = Handler()
         thumbnailDownloader =
-            ThumbnailDownloader(responseHandler){ photoHolder, bitmap ->
+            ThumbnailDownloader(responseHandler) { photoHolder, bitmap ->
                 val drawable = BitmapDrawable(resources, bitmap)
                 photoHolder.bindDrawable(drawable)
             }
@@ -55,9 +57,9 @@ class PhotoGalleryFragment : Fragment() {
 
     }
 
-    private fun onPhotosLoaded(items: List<GalleryItem>){
+    private fun onPhotosLoaded(items: List<GalleryItem>) {
         // DataSource
-      val dataSource = MyPositionalDataSource(items)
+        val dataSource = MyPositionalDataSource(items)
         Log.d(TAG_T, "onPhotosLoaded + thread= ${Thread.currentThread()}")
 
         // PagedList
@@ -67,7 +69,7 @@ class PhotoGalleryFragment : Fragment() {
             .setPageSize(20)
             .build()
 
-            val pagedList: PagedList<GalleryItem?> =
+        val pagedList: PagedList<GalleryItem?> =
             PagedList.Builder(dataSource, config)
                 .setFetchExecutor(Executors.newSingleThreadExecutor())
                 .setNotifyExecutor(MainThreadExecutor())
@@ -77,7 +79,8 @@ class PhotoGalleryFragment : Fragment() {
     }
 
     private fun View.afterMeasured(f: View.() -> Unit) {
-        viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        viewTreeObserver.addOnGlobalLayoutListener(object :
+            ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 if (measuredHeight > 0 && measuredWidth > 0) {
                     viewTreeObserver.removeOnGlobalLayoutListener(this)
@@ -106,17 +109,34 @@ class PhotoGalleryFragment : Fragment() {
         Log.d(TAG, "onCreateView")
         photoRecyclerView = view.findViewById(R.id.photo_recycler_view)
 
+        view.findViewById<View>(R.id.start_service).setOnClickListener {
+            activity?.startService(Intent(context, SimpleService::class.java))
+        }
+
+        view.findViewById<View>(R.id.start_foreground_service).setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context?.applicationContext?.startForegroundService(
+                    Intent(
+                        context,
+                        ForegroundService::class.java
+                    )
+                )
+            }
+        }
+
+
         photoRecyclerView.afterMeasured {
             val weightColum: Int = activity?.resources?.getDimension(R.dimen.column_average_width)!!
                 .toInt()
 
-                    spanCount = photoRecyclerView.width/weightColum
-                    Log.d(TAG, "onCreateView - spanCount = " + spanCount)
-                    Log.d(TAG, "onCreateView - weightColum = " + weightColum)
-                    Log.d(TAG, "onCreateView - photoRecyclerView.width = " + photoRecyclerView.width)
-            photoRecyclerView.layoutManager = GridLayoutManager(context, photoRecyclerView.width/weightColum)
+            spanCount = photoRecyclerView.width / weightColum
+            Log.d(TAG, "onCreateView - spanCount = " + spanCount)
+            Log.d(TAG, "onCreateView - weightColum = " + weightColum)
+            Log.d(TAG, "onCreateView - photoRecyclerView.width = " + photoRecyclerView.width)
+            photoRecyclerView.layoutManager =
+                GridLayoutManager(context, photoRecyclerView.width / weightColum)
         }
-            return view
+        return view
 
     }
 
@@ -135,7 +155,6 @@ class PhotoGalleryFragment : Fragment() {
                 photoRecyclerView.adapter = adapter
                 onPhotosLoaded(galleryItems)
                 Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
-
             }
         )
     }
@@ -160,11 +179,12 @@ class PhotoGalleryFragment : Fragment() {
                 thumbnailDownloader.queueThumbnail(holder, itItem.url)
             }
             holder.itemView.post(Runnable {
-                fun run()
-                {
-                    val cellWidth: Int = holder.itemView.getWidth();// this will give you cell width dynamically
+                fun run() {
+                    val cellWidth: Int =
+                        holder.itemView.getWidth();// this will give you cell width dynamically
                     Log.d(TAG, "onBindViewHolder - cellWidth = " + cellWidth)
-                    val cellHeight: Int = holder.itemView.getHeight();// this will give you cell height dynamically
+                    val cellHeight: Int =
+                        holder.itemView.getHeight();// this will give you cell height dynamically
                 }
             })
 
@@ -175,11 +195,15 @@ class PhotoGalleryFragment : Fragment() {
                 DiffUtil.ItemCallback<GalleryItem>() {
                 // Concert details may have changed if reloaded from the database,
                 // but ID is fixed.
-                override fun areItemsTheSame(oldItem: GalleryItem,
-                                             newItem: GalleryItem) = oldItem.id == newItem.id
+                override fun areItemsTheSame(
+                    oldItem: GalleryItem,
+                    newItem: GalleryItem
+                ) = oldItem.id == newItem.id
 
-                override fun areContentsTheSame(oldItem: GalleryItem,
-                                                newItem: GalleryItem) = oldItem == newItem
+                override fun areContentsTheSame(
+                    oldItem: GalleryItem,
+                    newItem: GalleryItem
+                ) = oldItem == newItem
             }
         }
 
@@ -225,6 +249,7 @@ class PhotoGalleryFragment : Fragment() {
                     photoGalleryViewModel.fetchPhotos(queryText)
                     return true
                 }
+
                 override fun onQueryTextChange(queryText: String): Boolean {
                     Log.d(TAG, "QueryTextChange: $queryText")
                     return false
