@@ -26,6 +26,7 @@ import com.bignerdranch.android.photogallery.MainThreadExecutor
 import com.bignerdranch.android.photogallery.R
 import com.bignerdranch.android.photogallery.domain.managers.workmanager.PollWorker
 import com.bignerdranch.android.photogallery.domain.models.GalleryItem
+import com.bignerdranch.android.photogallery.ui.fragments.visible.VisibleFragment
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -33,7 +34,7 @@ private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
 private const val POLL_WORK = "POLL_WORK"
 private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoGalleryFragment.PhotoHolder>
-class PhotoGalleryFragment : Fragment() {
+class PhotoGalleryFragment : VisibleFragment() {
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView: RecyclerView
     var spanCount: Int? = null
