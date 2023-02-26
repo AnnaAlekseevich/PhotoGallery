@@ -3,6 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/anna/ANDROID_LEARNING/PhotoGallery2/PhotoGallery/app/src/main/res/layout/activity_photo_gallery.xml" value="0.16666666666666666" />
+        <entry key="..\:/anna/ANDROID_LEARNING/PhotoGallery2/PhotoGallery/app/src/main/res/layout/fragment_photo_gallery.xml" value="0.16666666666666666" />
+        <entry key="..\:/anna/ANDROID_LEARNING/PhotoGallery2/PhotoGallery/app/src/main/res/layout/list_item_gallery.xml" value="0.16666666666666666" />
         <entry key="..\:/anna/ANDROID_LEARNING/PhotoGallery2/PhotoGallery/app/src/main/res/menu/fragment_photo_gallery.xml" value="0.15260416666666668" />
       </map>
     </option>

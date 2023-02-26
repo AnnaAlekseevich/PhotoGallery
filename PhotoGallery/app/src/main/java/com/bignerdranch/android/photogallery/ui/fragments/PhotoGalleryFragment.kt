@@ -14,6 +14,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.paging.PagedList
 import androidx.paging.PagedListAdapter
@@ -24,15 +25,16 @@ import androidx.work.*
 import com.bignerdranch.android.photogallery.*
 import com.bignerdranch.android.photogallery.MainThreadExecutor
 import com.bignerdranch.android.photogallery.R
-import com.bignerdranch.android.photogallery.domain.managers.workmanager.PollWorker
+//import com.bignerdranch.android.photogallery.domain.managers.workmanager.PollWorker
 import com.bignerdranch.android.photogallery.domain.models.GalleryItem
+import com.bignerdranch.android.photogallery.domain.models.Photo
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
 private const val POLL_WORK = "POLL_WORK"
-private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoGalleryFragment.PhotoHolder>
+//private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoGalleryFragment.PhotoHolder>
 class PhotoGalleryFragment : Fragment() {
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView: RecyclerView
@@ -41,7 +43,7 @@ class PhotoGalleryFragment : Fragment() {
 
 
 
-    private var adapter: PhotoAdapter? = null
+//    private var adapter: PhotoAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,15 +53,15 @@ class PhotoGalleryFragment : Fragment() {
         photoGalleryViewModel =
             ViewModelProviders.of(this).get(PhotoGalleryViewModel::class.java)
         Log.d(TAG_T, "onCreate + thread= ${Thread.currentThread()}")
-        adapter = PhotoAdapter(requireContext())
+//        adapter = PhotoAdapter(requireContext())
 
-        val responseHandler = Handler()
-        thumbnailDownloader =
-            ThumbnailDownloader(responseHandler){ photoHolder, bitmap ->
-                val drawable = BitmapDrawable(resources, bitmap)
-                photoHolder.bindDrawable(drawable)
-            }
-        lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
+//        val responseHandler = Handler()
+//        thumbnailDownloader =
+//            ThumbnailDownloader(responseHandler){ photoHolder, bitmap ->
+//                val drawable = BitmapDrawable(resources, bitmap)
+//                photoHolder.bindDrawable(drawable)
+//            }
+//        lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
 
 //        val constraints = Constraints.Builder()
 //            .setRequiredNetworkType(NetworkType.UNMETERED)
@@ -91,7 +93,7 @@ class PhotoGalleryFragment : Fragment() {
                 .setNotifyExecutor(MainThreadExecutor())
                 .build()
 
-        adapter?.submitList(pagedList)
+//        adapter?.submitList(pagedList)
     }
 
     private fun View.afterMeasured(f: View.() -> Unit) {
@@ -113,13 +115,13 @@ class PhotoGalleryFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
 
-        activity?.let {
-            getViewLifecycleOwnerLiveData().observe(it) { viewLifecycleOwner ->
-                viewLifecycleOwner.lifecycle.addObserver(
-                    thumbnailDownloader.viewLifecycleObserver
-                )
-            }
-        }
+//        activity?.let {
+//            getViewLifecycleOwnerLiveData().observe(it) { viewLifecycleOwner ->
+//                viewLifecycleOwner.lifecycle.addObserver(
+//                    thumbnailDownloader.viewLifecycleObserver
+//                )
+//            }
+//        }
 
         val view = inflater.inflate(R.layout.fragment_photo_gallery, container, false)
         Log.d(TAG, "onCreateView")
@@ -145,91 +147,102 @@ class PhotoGalleryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        photoRecyclerView.adapter = photoGalleryViewModel.photosAdapter
+        photoRecyclerView.layoutManager = GridLayoutManager(requireContext(), 3)
 
-        Log.d(TAG, "onViewCreated")
-        photoGalleryViewModel.galleryItemLiveData.observe(
-            viewLifecycleOwner
-        ) {
-            Log.d(TAG, "onViewCreated - galleryItems" + it)
-            photoRecyclerView.adapter = adapter
-            onPhotosLoaded(it)
-            Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
-
-        }
-    }
-
-
-    private class PhotoAdapter(val context: Context) :
-        PagedListAdapter<GalleryItem, PhotoHolder>(DIFF_CALLBACK) {
-
-        override fun onBindViewHolder(holder: PhotoHolder, position: Int) {
-            Log.d(TAG, "onBindViewHolder")
-            val itItem: GalleryItem? = getItem(position)
-
-            // Note that "concert" is a placeholder if it's null.
-            //holder.bindTo(itItem)
-            Log.d(TAG, "PhotoAdapter" + itItem)
-            val placeholder: Drawable = ContextCompat.getDrawable(
-                context,
-                R.drawable.bill_up_close
-            ) ?: ColorDrawable()
-            holder.bindDrawable(placeholder)
-            if (itItem != null) {
-                thumbnailDownloader.queueThumbnail(holder, itItem.url)
-            }
-            holder.itemView.post(Runnable {
-                fun run()
-                {
-                    val cellWidth: Int = holder.itemView.getWidth();// this will give you cell width dynamically
-                    Log.d(TAG, "onBindViewHolder - cellWidth = " + cellWidth)
-                    val cellHeight: Int = holder.itemView.getHeight();// this will give you cell height dynamically
+        photoGalleryViewModel.loadPhotos().observe(viewLifecycleOwner,
+            Observer<List<Photo>> { list ->
+                with(photoGalleryViewModel.photosAdapter) {
+                    photos.clear()
+                    photos.addAll(list)
+                    notifyDataSetChanged()
                 }
             })
 
-        }
-
-        companion object {
-            private val DIFF_CALLBACK = object :
-                DiffUtil.ItemCallback<GalleryItem>() {
-                // Concert details may have changed if reloaded from the database,
-                // but ID is fixed.
-                override fun areItemsTheSame(oldItem: GalleryItem,
-                                             newItem: GalleryItem
-                ) = oldItem.id == newItem.id
-
-                override fun areContentsTheSame(oldItem: GalleryItem,
-                                                newItem: GalleryItem
-                ) = oldItem == newItem
-            }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoHolder {
-            Log.d(TAG, "onCreateViewHolder")
-            val imageView = LayoutInflater.from(parent.context).inflate(
-                R.layout.list_item_gallery,
-                parent,
-                false
-            ) as ImageView
-            return PhotoHolder(imageView)
-        }
+//        Log.d(TAG, "onViewCreated")
+//        photoGalleryViewModel.galleryItemLiveData.observe(
+//            viewLifecycleOwner
+//        ) {
+//            Log.d(TAG, "onViewCreated - galleryItems" + it)
+//            photoRecyclerView.adapter = adapter
+//            onPhotosLoaded(it)
+//            Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
+//
+//        }
     }
 
-    class PhotoHolder(itemImageView: ImageView) : RecyclerView.ViewHolder(itemImageView) {
-        val bindDrawable: (Drawable) -> Unit = itemImageView::setImageDrawable
-    }
+
+//    class PhotoAdapter(val context: Context) :
+//        PagedListAdapter<GalleryItem, PhotoHolder>(DIFF_CALLBACK) {
+//
+//        override fun onBindViewHolder(holder: PhotoHolder, position: Int) {
+//            Log.d(TAG, "onBindViewHolder")
+//            val itItem: GalleryItem? = getItem(position)
+//
+//            // Note that "concert" is a placeholder if it's null.
+//            //holder.bindTo(itItem)
+//            Log.d(TAG, "PhotoAdapter" + itItem)
+//            val placeholder: Drawable = ContextCompat.getDrawable(
+//                context,
+//                R.drawable.bill_up_close
+//            ) ?: ColorDrawable()
+//            holder.bindDrawable(placeholder)
+//            if (itItem != null) {
+//                thumbnailDownloader.queueThumbnail(holder, itItem.url)
+//            }
+//            holder.itemView.post(Runnable {
+//                fun run()
+//                {
+//                    val cellWidth: Int = holder.itemView.getWidth();// this will give you cell width dynamically
+//                    Log.d(TAG, "onBindViewHolder - cellWidth = " + cellWidth)
+//                    val cellHeight: Int = holder.itemView.getHeight();// this will give you cell height dynamically
+//                }
+//            })
+//
+//        }
+//
+//        companion object {
+//            private val DIFF_CALLBACK = object :
+//                DiffUtil.ItemCallback<GalleryItem>() {
+//                // Concert details may have changed if reloaded from the database,
+//                // but ID is fixed.
+//                override fun areItemsTheSame(oldItem: GalleryItem,
+//                                             newItem: GalleryItem
+//                ) = oldItem.id == newItem.id
+//
+//                override fun areContentsTheSame(oldItem: GalleryItem,
+//                                                newItem: GalleryItem
+//                ) = oldItem == newItem
+//            }
+//        }
+//
+//        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoHolder {
+//            Log.d(TAG, "onCreateViewHolder")
+//            val imageView = LayoutInflater.from(parent.context).inflate(
+//                R.layout.list_item_gallery,
+//                parent,
+//                false
+//            ) as ImageView
+//            return PhotoHolder(imageView)
+//        }
+//    }
+//
+//    class PhotoHolder(itemImageView: ImageView) : RecyclerView.ViewHolder(itemImageView) {
+//        val bindDrawable: (Drawable) -> Unit = itemImageView::setImageDrawable
+//    }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        viewLifecycleOwner.lifecycle.removeObserver(
-            thumbnailDownloader.viewLifecycleObserver
-        )
+//        viewLifecycleOwner.lifecycle.removeObserver(
+//            thumbnailDownloader.viewLifecycleObserver
+//        )
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        lifecycle.removeObserver(
-            thumbnailDownloader.fragmentLifecycleObserver
-        )
+//        lifecycle.removeObserver(
+//            thumbnailDownloader.fragmentLifecycleObserver
+//        )
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -279,13 +292,13 @@ class PhotoGalleryFragment : Fragment() {
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.UNMETERED)
                         .build()
-                    val periodicRequest = PeriodicWorkRequest
-                        .Builder(PollWorker::class.java, 15, TimeUnit.MINUTES)
-                        .setConstraints(constraints)
-                        .build()
-                    WorkManager.getInstance().enqueueUniquePeriodicWork(POLL_WORK,
-                        ExistingPeriodicWorkPolicy.KEEP,
-                        periodicRequest)
+//                    val periodicRequest = PeriodicWorkRequest
+//                        .Builder(PollWorker::class.java, 15, TimeUnit.MINUTES)
+//                        .setConstraints(constraints)
+//                        .build()
+//                    WorkManager.getInstance().enqueueUniquePeriodicWork(POLL_WORK,
+//                        ExistingPeriodicWorkPolicy.KEEP,
+//                        periodicRequest)
                     QueryPreferences.setPolling(requireContext(), true)
                 }
                 activity?.invalidateOptionsMenu()

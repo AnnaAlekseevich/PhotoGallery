@@ -3,9 +3,12 @@ package com.bignerdranch.android.photogallery.ui.fragments
 
 import android.app.Application
 import androidx.lifecycle.*
-import com.bignerdranch.android.photogallery.FlickrFetcher
 import com.bignerdranch.android.photogallery.QueryPreferences
+import com.bignerdranch.android.photogallery.domain.api.WebClient
 import com.bignerdranch.android.photogallery.domain.models.GalleryItem
+import com.bignerdranch.android.photogallery.domain.models.Photo
+import com.bignerdranch.android.photogallery.ui.fragments.adapter.PhotosAdapter
+import kotlinx.coroutines.launch
 
 //class PhotoGalleryViewModel : ViewModel() {
 //    val galleryItemLiveData: LiveData<List<GalleryItem>>
@@ -20,22 +23,41 @@ import com.bignerdranch.android.photogallery.domain.models.GalleryItem
 //        concertDao.concertsByDate().toLiveData(pageSize = 50)
 //}
 class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app) {
-    val galleryItemLiveData: LiveData<List<GalleryItem>>
-    private val flickrFetcher = FlickrFetcher()
+//    val galleryItemLiveData: LiveData<List<GalleryItem>>
+//    private val flickrFetcher = FlickrFetcher()
     private val mutableSearchTerm = MutableLiveData<String>()
+
+    private val mutablePhotosListLiveData = MutableLiveData<List<Photo>>()
+    private val photosListLiveData: LiveData<List<Photo>> = mutablePhotosListLiveData
+    var photosAdapter = PhotosAdapter()
+
+    fun loadPhotos(): LiveData<List<Photo>> {
+        viewModelScope.launch {
+            val searchResponse = WebClient.client.fetchImages()
+            val photosList = searchResponse.photos.photo.map { photo ->
+                Photo(
+                    id = photo.id,
+                    url = "https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}.jpg",
+                    title = photo.title
+                )
+            }
+            mutablePhotosListLiveData.postValue(photosList)
+        }
+        return photosListLiveData
+    }
 
     val searchTerm: String
         get() = mutableSearchTerm.value ?: ""
 
     init {
-        mutableSearchTerm.value = QueryPreferences.getStoredQuery(app)//"planets"
-        galleryItemLiveData = Transformations.switchMap(mutableSearchTerm) { searchTerm ->
-            if (searchTerm.isBlank()) {
-                flickrFetcher.fetchPhotos()
-            } else {
-                flickrFetcher.searchPhotos(searchTerm)
-            }
-        }
+//        mutableSearchTerm.value = QueryPreferences.getStoredQuery(app)//"planets"
+//        galleryItemLiveData = Transformations.switchMap(mutableSearchTerm) { searchTerm ->
+//            if (searchTerm.isBlank()) {
+//                flickrFetcher.fetchPhotos()
+//            } else {
+//                flickrFetcher.searchPhotos(searchTerm)
+//            }
+//        }
     }
 
     fun fetchPhotos(query: String = "") {
