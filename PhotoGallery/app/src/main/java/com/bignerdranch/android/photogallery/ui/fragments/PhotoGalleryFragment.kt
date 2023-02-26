@@ -1,6 +1,5 @@
 package com.bignerdranch.android.photogallery.ui.fragments
 
-//import com.bignerdranch.android.photogallery.domain.managers.workmanager.PollWorker
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -13,15 +12,15 @@ import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.work.Constraints
-import androidx.work.NetworkType
-import androidx.work.WorkManager
+import androidx.work.*
 import com.bignerdranch.android.photogallery.QueryPreferences
 import com.bignerdranch.android.photogallery.R
+import com.bignerdranch.android.photogallery.domain.managers.workmanager.PollWorker
 import com.bignerdranch.android.photogallery.domain.models.Photo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "PhotoGalleryFragment"
 private const val TAG_T = "Thread"
@@ -57,7 +56,6 @@ class PhotoGalleryFragment : Fragment() {
             }
         })
     }
-
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -166,13 +164,13 @@ class PhotoGalleryFragment : Fragment() {
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.UNMETERED)
                         .build()
-//                    val periodicRequest = PeriodicWorkRequest
-//                        .Builder(PollWorker::class.java, 15, TimeUnit.MINUTES)
-//                        .setConstraints(constraints)
-//                        .build()
-//                    WorkManager.getInstance().enqueueUniquePeriodicWork(POLL_WORK,
-//                        ExistingPeriodicWorkPolicy.KEEP,
-//                        periodicRequest)
+                    val periodicRequest = PeriodicWorkRequest
+                        .Builder(PollWorker::class.java, 15, TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
+                    WorkManager.getInstance().enqueueUniquePeriodicWork(POLL_WORK,
+                        ExistingPeriodicWorkPolicy.KEEP,
+                        periodicRequest)
                     QueryPreferences.setPolling(requireContext(), true)
                 }
                 activity?.invalidateOptionsMenu()

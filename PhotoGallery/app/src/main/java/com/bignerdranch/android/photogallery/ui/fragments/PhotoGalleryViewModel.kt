@@ -1,6 +1,5 @@
 package com.bignerdranch.android.photogallery.ui.fragments
 
-
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -12,23 +11,9 @@ import com.bignerdranch.android.photogallery.domain.models.Photo
 import com.bignerdranch.android.photogallery.ui.fragments.adapter.PhotosAdapter
 import kotlinx.coroutines.launch
 
-//class PhotoGalleryViewModel : ViewModel() {
-//    val galleryItemLiveData: LiveData<List<GalleryItem>>
-//
-//    init {
-//        galleryItemLiveData = FlickrFetchr().fetchPhotos()
-//    }
-//
-//}
-//class ConcertViewModel(concertDao: ConcertDao) : ViewModel() {
-//    val concertList: LiveData<PagedList<Concert>> =
-//        concertDao.concertsByDate().toLiveData(pageSize = 50)
-//}
 class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app) {
-//    val galleryItemLiveData: LiveData<List<GalleryItem>>
-//    private val flickrFetcher = FlickrFetcher()
-    private val mutableSearchTerm = MutableLiveData<String>()
 
+    private val mutableSearchTerm = MutableLiveData<String>()
     private val mutablePhotosListLiveData = MutableLiveData<List<Photo>>()
     private val photosListLiveData: LiveData<List<Photo>> = mutablePhotosListLiveData
 
@@ -37,7 +22,7 @@ class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app
     fun loadPhotos(): LiveData<List<Photo>> {
 
         viewModelScope.launch {
-//            mutableSearchTerm.value = QueryPreferences.getStoredQuery(app)
+
             val searchResponse = WebClient.client.fetchImages()
             val photosList = searchResponse.photos.photo.map { photo ->
                 Photo(
@@ -53,17 +38,6 @@ class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app
 
     val searchTerm: String
         get() = mutableSearchTerm.value ?: ""
-
-    init {
-//        mutableSearchTerm.value = QueryPreferences.getStoredQuery(app)//"planets"
-//        galleryItemLiveData = Transformations.switchMap(mutableSearchTerm) { searchTerm ->
-//            if (searchTerm.isBlank()) {
-//                flickrFetcher.fetchPhotos()
-//            } else {
-//                flickrFetcher.searchPhotos(searchTerm)
-//            }
-//        }
-    }
 
     fun fetchPhotos(query: String = "") {
         QueryPreferences.setStoredQuery(app, query)

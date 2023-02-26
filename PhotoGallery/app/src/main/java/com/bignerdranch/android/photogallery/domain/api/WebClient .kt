@@ -8,8 +8,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-private const val TAG = "FlickrFetchr"
-
 private const val BASE_URL = "https://api.flickr.com/services/rest/"
 private const val CONNECTION_TIMEOUT_MS: Long = 10
 

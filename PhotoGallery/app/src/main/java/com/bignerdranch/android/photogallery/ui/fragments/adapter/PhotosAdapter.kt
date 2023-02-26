@@ -33,7 +33,6 @@ class PhotosAdapter(val photos: MutableList<Photo> = mutableListOf()) : Recycler
                 .resize(IMAGE_SIDE_PX, IMAGE_SIDE_PX)
                 .centerCrop()
                 .into(itemView.imageView)
-//                .into(itemView.imageView)
         }
     }
 }
