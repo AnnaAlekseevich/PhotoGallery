@@ -23,5 +23,39 @@
         android:layout_marginTop="50dp"
         android:text="StartForegroundService" />
 
+    <Button
+        android:id="@+id/bind_service"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="120dp"
+        android:text="BINDService" />
+
+    <Button
+        android:id="@+id/unbind_service"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="170dp"
+        android:text="unbindservice" />
+
+    <Button
+        android:id="@+id/bind_service_test_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="150dp"
+        android:layout_marginRight="130dp"
+        android:text="test_1" />
+
+    <Button
+        android:id="@+id/bind_service_test_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="150dp"
+        android:layout_marginRight="-130dp"
+        android:text="test_2" />
+
 
 </FrameLayout>

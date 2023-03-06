@@ -34,7 +34,7 @@ class SimpleService : Service() {
             delay(1000)
             Log.d("Services_LOGS", "TIK-TAK $i")
         }
-//        stopSelf()
+        stopSelf()
     }
 
     override fun onDestroy() {

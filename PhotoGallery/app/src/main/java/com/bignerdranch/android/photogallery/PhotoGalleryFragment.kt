@@ -1,16 +1,20 @@
 package com.bignerdranch.android.photogallery
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.util.Log
 import android.view.*
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -20,6 +24,7 @@ import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bignerdranch.android.photogallery.services.BindService
 import com.bignerdranch.android.photogallery.services.ForegroundService
 import com.bignerdranch.android.photogallery.services.SimpleService
 import java.util.concurrent.Executors
@@ -42,17 +47,15 @@ class PhotoGalleryFragment : Fragment() {
         retainInstance = true
         setHasOptionsMenu(true)
 
-        photoGalleryViewModel =
-            ViewModelProviders.of(this).get(PhotoGalleryViewModel::class.java)
+        photoGalleryViewModel = ViewModelProviders.of(this).get(PhotoGalleryViewModel::class.java)
         Log.d(TAG_T, "onCreate + thread= ${Thread.currentThread()}")
         adapter = PhotoAdapter(requireContext())
 
         val responseHandler = Handler()
-        thumbnailDownloader =
-            ThumbnailDownloader(responseHandler) { photoHolder, bitmap ->
-                val drawable = BitmapDrawable(resources, bitmap)
-                photoHolder.bindDrawable(drawable)
-            }
+        thumbnailDownloader = ThumbnailDownloader(responseHandler) { photoHolder, bitmap ->
+            val drawable = BitmapDrawable(resources, bitmap)
+            photoHolder.bindDrawable(drawable)
+        }
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
 
     }
@@ -63,17 +66,13 @@ class PhotoGalleryFragment : Fragment() {
         Log.d(TAG_T, "onPhotosLoaded + thread= ${Thread.currentThread()}")
 
         // PagedList
-        val config = PagedList.Config.Builder()
-            .setEnablePlaceholders(false)
-            .setInitialLoadSizeHint(20)
-            .setPageSize(20)
-            .build()
+        val config =
+            PagedList.Config.Builder().setEnablePlaceholders(false).setInitialLoadSizeHint(20)
+                .setPageSize(20).build()
 
-        val pagedList: PagedList<GalleryItem?> =
-            PagedList.Builder(dataSource, config)
-                .setFetchExecutor(Executors.newSingleThreadExecutor())
-                .setNotifyExecutor(MainThreadExecutor())
-                .build()
+        val pagedList: PagedList<GalleryItem?> = PagedList.Builder(dataSource, config)
+            .setFetchExecutor(Executors.newSingleThreadExecutor())
+            .setNotifyExecutor(MainThreadExecutor()).build()
 
         adapter?.submitList(pagedList)
     }
@@ -92,9 +91,7 @@ class PhotoGalleryFragment : Fragment() {
 
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
 
         activity?.let {
@@ -117,17 +114,32 @@ class PhotoGalleryFragment : Fragment() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context?.applicationContext?.startForegroundService(
                     Intent(
-                        context,
-                        ForegroundService::class.java
+                        context, ForegroundService::class.java
                     )
                 )
             }
         }
 
+        view.findViewById<View>(R.id.bind_service).setOnClickListener {
+            bindService()
+        }
+
+        view.findViewById<View>(R.id.unbind_service).setOnClickListener {
+            unbindService()
+        }
+
+        view.findViewById<View>(R.id.bind_service_test_1).setOnClickListener {
+            test1()
+        }
+
+        view.findViewById<View>(R.id.bind_service_test_2).setOnClickListener {
+            test2()
+        }
+
 
         photoRecyclerView.afterMeasured {
-            val weightColum: Int = activity?.resources?.getDimension(R.dimen.column_average_width)!!
-                .toInt()
+            val weightColum: Int =
+                activity?.resources?.getDimension(R.dimen.column_average_width)!!.toInt()
 
             spanCount = photoRecyclerView.width / weightColum
             Log.d(TAG, "onCreateView - spanCount = " + spanCount)
@@ -140,6 +152,66 @@ class PhotoGalleryFragment : Fragment() {
 
     }
 
+    private lateinit var mService: BindService
+    private var mBound: Boolean = false
+
+    /** Defines callbacks for service binding, passed to bindService()  */
+    private val connection = object : ServiceConnection {
+
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            val binder = service as BindService.SuperBinder
+            mService = binder.getService()
+            mBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound = false
+        }
+    }
+
+
+    private fun bindService() {
+        Intent(activity, BindService::class.java).also { intent ->
+            activity?.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+
+    private fun test1() {
+        if (mBound) {
+            showMessageFromServices(mService.makeTest1Text())
+        } else {
+            showBindServiceError()
+        }
+    }
+
+    private fun showMessageFromServices(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun test2() {
+        if (mBound) {
+            showMessageFromServices(mService.makeTest2Text())
+        } else {
+            showBindServiceError()
+        }
+    }
+
+    private fun showBindServiceError() {
+        Toast.makeText(context, "Service is not bound", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun unbindService() {
+        activity?.unbindService(connection)
+        mBound = false
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unbindService()
+    }
+
     companion object {
         fun newInstance() = PhotoGalleryFragment()
     }
@@ -149,14 +221,13 @@ class PhotoGalleryFragment : Fragment() {
 
         Log.d(TAG, "onViewCreated")
         photoGalleryViewModel.galleryItemLiveData.observe(
-            viewLifecycleOwner,
-            { galleryItems ->
-                Log.d(TAG, "onViewCreated - galleryItems" + galleryItems)
-                photoRecyclerView.adapter = adapter
-                onPhotosLoaded(galleryItems)
-                Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
-            }
-        )
+            viewLifecycleOwner
+        ) { galleryItems ->
+            Log.d(TAG, "onViewCreated - galleryItems" + galleryItems)
+            photoRecyclerView.adapter = adapter
+            onPhotosLoaded(galleryItems)
+            Log.d(TAG_T, "onViewCreated  + thread= ${Thread.currentThread()}")
+        }
     }
 
 
@@ -171,8 +242,7 @@ class PhotoGalleryFragment : Fragment() {
             //holder.bindTo(itItem)
             Log.d(TAG, "PhotoAdapter" + itItem)
             val placeholder: Drawable = ContextCompat.getDrawable(
-                context,
-                R.drawable.bill_up_close
+                context, R.drawable.bill_up_close
             ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
             if (itItem != null) {
@@ -191,18 +261,15 @@ class PhotoGalleryFragment : Fragment() {
         }
 
         companion object {
-            private val DIFF_CALLBACK = object :
-                DiffUtil.ItemCallback<GalleryItem>() {
+            private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<GalleryItem>() {
                 // Concert details may have changed if reloaded from the database,
                 // but ID is fixed.
                 override fun areItemsTheSame(
-                    oldItem: GalleryItem,
-                    newItem: GalleryItem
+                    oldItem: GalleryItem, newItem: GalleryItem
                 ) = oldItem.id == newItem.id
 
                 override fun areContentsTheSame(
-                    oldItem: GalleryItem,
-                    newItem: GalleryItem
+                    oldItem: GalleryItem, newItem: GalleryItem
                 ) = oldItem == newItem
             }
         }
@@ -210,9 +277,7 @@ class PhotoGalleryFragment : Fragment() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoHolder {
             Log.d(TAG, "onCreateViewHolder")
             val imageView = LayoutInflater.from(parent.context).inflate(
-                R.layout.list_item_gallery,
-                parent,
-                false
+                R.layout.list_item_gallery, parent, false
             ) as ImageView
             return PhotoHolder(imageView)
         }
