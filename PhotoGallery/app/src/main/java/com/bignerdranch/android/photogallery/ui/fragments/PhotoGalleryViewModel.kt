@@ -1,6 +1,7 @@
 package com.bignerdranch.android.photogallery.ui.fragments
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -9,8 +10,10 @@ import com.bignerdranch.android.photogallery.QueryPreferences
 import com.bignerdranch.android.photogallery.domain.api.WebClient
 import com.bignerdranch.android.photogallery.domain.models.Photo
 import com.bignerdranch.android.photogallery.ui.fragments.adapter.PhotosAdapter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+private const val TAG = "PhotoGalleryViewModel"
 class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private val mutableSearchTerm = MutableLiveData<String>()
@@ -21,17 +24,24 @@ class PhotoGalleryViewModel(private val app: Application) : AndroidViewModel(app
 
     fun loadPhotos(): LiveData<List<Photo>> {
 
-        viewModelScope.launch {
-
-            val searchResponse = WebClient.client.fetchImages()
-            val photosList = searchResponse.photos.photo.map { photo ->
-                Photo(
-                    id = photo.id,
-                    url = "https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}.jpg",
-                    title = photo.title
-                )
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val searchResponse = WebClient.client.fetchImages()
+                val photosList = searchResponse.photos.photo.map { photo ->
+                    Photo(
+                        id = photo.id,
+                        url = "https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}.jpg",
+                        title = photo.title
+                    )
+                }
+                mutablePhotosListLiveData.postValue(photosList)
+            }.onFailure { throwable ->
+                Log.d(TAG, "throwable -> $throwable")
+            }.onSuccess {
+                Log.d(TAG, "Success!!!")
             }
-            mutablePhotosListLiveData.postValue(photosList)
+
+
         }
         return photosListLiveData
     }
